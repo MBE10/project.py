@@ -31,8 +31,11 @@ def get_current_user(request: Request):
 @app.get("/")
 def home(request: Request):
     user_id = get_current_user(request)
+    if not user_id:
+        return RedirectResponse("/login")
     movies = get_all_movies_crud()
     return templates.TemplateResponse("index.html", {"request": request, "user_id": user_id, "movies": movies})
+
 
 
 

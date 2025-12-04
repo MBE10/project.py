@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Search Results - Cineverse</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <h1>Search Results</h1>
+    {% if movies %}
+        <ul>
+            {% for movie in movies %}
+                <li>
+                    <strong>{{ movie.title }}</strong> ({{ movie.year }})<br>
+                    Director: {{ movie.director }}<br>
+                    {{ movie.description }}<br>
+                    Added by: {{ movie.added_by }}<br>
+                    <a href="/movies/update/{{ movie.id }}">Edit</a> |
+                    <a href="/movies/delete/{{ movie.id }}">Delete</a>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>No results found.</p>
+    {% endif %}
+    <a href="/">Back to Home</a>
+</body>
+</html>

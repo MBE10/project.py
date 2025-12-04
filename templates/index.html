@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cineverse - Dashboard</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  
+    <header class="navbar">
+        <div class="logo">Cineverse</div>
+        <nav>
+            <a href="/">Home</a>
+            <a href="/movies/add">Add Movie</a>
+            <a href="/movies/scrape">Scrape Movie</a>
+            <a href="/logout">Logout</a>
+        </nav>
+    </header>
+
+    
+    <main>
+        <h2>All Movies</h2>
+        {% if movies %}
+            <div class="movies-container">
+                {% for movie in movies %}
+                    <div class="movie-card">
+                        <h3>{{ movie.title }} ({{ movie.year }})</h3>
+                        <p><strong>Director:</strong> {{ movie.director }}</p>
+                        <p>{{ movie.description }}</p>
+                        <p><strong>Added by:</strong> {{ movie.added_by }}</p>
+                        <div class="movie-actions">
+                            <a href="/movies/update/{{ movie.id }}">Edit</a> |
+                            <a href="/movies/delete/{{ movie.id }}">Delete</a>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p>No movies yet.</p>
+        {% endif %}
+    </main>
+</body>
+</html>
