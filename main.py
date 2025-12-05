@@ -5,9 +5,31 @@ import auth
 
 app = FastAPI()
 
-# Static files (CSS / JS / Images)
+# Static files (CSS / Images)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+# ---------------------------
+# Helper: Navbar HTML
+# ---------------------------
+def dashboard_navbar(username: str):
+    return f"""
+    <header class="navbar">
+        <div class="nav-left">
+          <a class="logo" href="/dashboard">🎬 Cineverse</a>
+          <nav class="nav-links">
+            <a href="/dashboard">Home</a>
+            <a href="/movies">Movies</a>
+            <a href="/movies/add">Add Movie</a>
+            <a href="/movies/scrape">Scrape</a>
+            <a href="/authors">Authors</a>
+          </nav>
+        </div>
+        <div class="nav-right">
+          <div style="color:var(--accent-contrast); font-weight:600;">{username}</div>
+          <a class="btn-ghost" href="/logout">Logout</a>
+        </div>
+    </header>
+    """
 
 # ---------------------------
 # HOME REDIRECT
@@ -15,15 +37,10 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 @app.get("/")
 async def home(request: Request):
     session_id = request.cookies.get("session_id")
-
-    # If logged in → dashboard
     username = auth.get_user_by_session(session_id)
     if username:
         return RedirectResponse("/dashboard")
-    
-    # If not logged in → login page
     return RedirectResponse("/login")
-
 
 # ---------------------------
 # LOGIN PAGE
@@ -32,31 +49,27 @@ async def home(request: Request):
 async def login_page():
     return """
     <html>
-        <body style="font-family: Arial; background:#001933; display:flex; justify-content:center; align-items:center; height:100vh;">
-            <form method="post" style="background:white; padding:30px; border-radius:10px; width:300px;">
-                <h2>Login</h2>
-                <input name="username" placeholder="Username" required style="width:100%; padding:10px; margin-bottom:10px;">
-                <input name="password" type="password" placeholder="Password" required style="width:100%; padding:10px; margin-bottom:10px;">
-                <button type="submit" style="width:100%; padding:10px;">Login</button>
-                <p>Don't have an account? <a href="/register">Register</a></p>
-            </form>
-        </body>
+      <body style="font-family: Arial; background:#f0f2f5; display:flex; justify-content:center; align-items:center; height:100vh;">
+        <form method="post" style="background:white; padding:40px; border-radius:15px; width:350px; box-shadow:0 8px 20px rgba(0,0,0,0.1);">
+          <h2 style="text-align:center; margin-bottom:20px;">Login</h2>
+          <input name="username" placeholder="Username" required style="width:100%; padding:12px; margin-bottom:15px; border-radius:8px; border:1px solid #ccc;">
+          <input name="password" type="password" placeholder="Password" required style="width:100%; padding:12px; margin-bottom:20px; border-radius:8px; border:1px solid #ccc;">
+          <button type="submit" style="width:100%; padding:12px; border:none; background:#001933; color:white; border-radius:10px; font-weight:600;">Login</button>
+          <p style="text-align:center; margin-top:15px;">Don't have an account? <a href="/register">Register</a></p>
+        </form>
+      </body>
     </html>
     """
-
 
 @app.post("/login")
 async def login(request: Request, username: str = Form(...), password: str = Form(...)):
     user = auth.login_user(username, password)
     if not user:
         return HTMLResponse("<h2>Invalid username or password</h2><a href='/login'>Back</a>")
-
-    # Create session
     session_id = auth.create_session(username)
     response = RedirectResponse("/dashboard", status_code=302)
     response.set_cookie("session_id", session_id)
     return response
-
 
 # ---------------------------
 # REGISTER PAGE
@@ -65,41 +78,35 @@ async def login(request: Request, username: str = Form(...), password: str = For
 async def register_page():
     return """
     <html>
-        <body style="font-family: Arial; background:#001933; display:flex; justify-content:center; align-items:center; height:100vh;">
-            <form method="post" style="background:white; padding:30px; border-radius:10px; width:300px;">
-                <h2>Register</h2>
-                <input name="username" placeholder="Choose username" required style="width:100%; padding:10px; margin-bottom:10px;">
-                <input name="password" type="password" placeholder="Choose password" required style="width:100%; padding:10px; margin-bottom:10px;">
-                <button type="submit" style="width:100%; padding:10px;">Register</button>
-                <p>Already have an account? <a href="/login">Login</a></p>
-            </form>
-        </body>
+      <body style="font-family: Arial; background:#f0f2f5; display:flex; justify-content:center; align-items:center; height:100vh;">
+        <form method="post" style="background:white; padding:40px; border-radius:15px; width:350px; box-shadow:0 8px 20px rgba(0,0,0,0.1);">
+          <h2 style="text-align:center; margin-bottom:20px;">Register</h2>
+          <input name="username" placeholder="Choose username" required style="width:100%; padding:12px; margin-bottom:15px; border-radius:8px; border:1px solid #ccc;">
+          <input name="password" type="password" placeholder="Choose password" required style="width:100%; padding:12px; margin-bottom:20px; border-radius:8px; border:1px solid #ccc;">
+          <button type="submit" style="width:100%; padding:12px; border:none; background:#001933; color:white; border-radius:10px; font-weight:600;">Register</button>
+          <p style="text-align:center; margin-top:15px;">Already have an account? <a href="/login">Login</a></p>
+        </form>
+      </body>
     </html>
     """
-
 
 @app.post("/register")
 async def register(username: str = Form(...), password: str = Form(...)):
     created = auth.register_user(username, password)
-
     if not created:
         return HTMLResponse("<h2>Username already exists</h2><a href='/register'>Back</a>")
-
     return RedirectResponse("/login", status_code=302)
 
-
 # ---------------------------
-# DASHBOARD
+# DASHBOARD / HOME PAGE
 # ---------------------------
 @app.get("/dashboard", response_class=HTMLResponse)
 async def dashboard(request: Request):
     session_id = request.cookies.get("session_id")
     username = auth.get_user_by_session(session_id)
-
     if not username:
         return RedirectResponse("/login")
 
-    # Dashboard HTML with navbar
     return f"""
     <!doctype html>
     <html lang="en">
@@ -146,54 +153,21 @@ async def dashboard(request: Request):
           box-shadow: 0 6px 20px rgba(2,6,23,0.06);
         }}
         @media (max-width:600px) {{
-          .nav-links {{ display:none; }} /* keep navbar simple on small screens */
+          .nav-links {{ display:none; }}
         }}
       </style>
     </head>
     <body>
-      <header class="navbar">
-        <div class="nav-left">
-          <a class="logo" href="/dashboard">🎬 Cineverse</a>
-          <nav class="nav-links" aria-label="Main navigation">
-            <a href="/dashboard">Home</a>
-            <a href="/movies">Movies</a>
-            <a href="/movies/add">Add Movie</a>
-            <a href="/movies/scrape">Scrape</a>
-            <a href="/authors">Authors</a>
-          </nav>
-        </div>
-
-        <div class="nav-right">
-          <div style="color:var(--accent-contrast); font-weight:600;">{username}</div>
-          <a class="btn-ghost" href="/logout">Logout</a>
-        </div>
-      </header>
-
+      {dashboard_navbar(username)}
       <main class="container">
         <section class="welcome-card">
           <h2>Welcome, {username} 👋</h2>
           <p>Use the navigation above to manage movies — add new ones, scrape details, or search the collection.</p>
         </section>
-
-        <!-- Example placeholder: movies area -->
-        <section style="margin-top:18px;">
-          <div style="display:flex;gap:14px;flex-wrap:wrap;">
-            <div style="flex:1 1 300px; background:#fff; padding:14px; border-radius:10px; box-shadow:0 4px 12px rgba(0,0,0,0.04);">
-              <h3>Movies</h3>
-              <p>Click <a href="/movies">Movies</a> to see the list.</p>
-            </div>
-            <div style="flex:1 1 300px; background:#fff; padding:14px; border-radius:10px; box-shadow:0 4px 12px rgba(0,0,0,0.04);">
-              <h3>Add Movie</h3>
-              <p>Go to <a href="/movies/add">Add Movie</a> to add a movie manually.</p>
-            </div>
-          </div>
-        </section>
       </main>
     </body>
     </html>
     """
-
-
 
 # ---------------------------
 # LOGOUT
@@ -203,7 +177,6 @@ async def logout(request: Request):
     session_id = request.cookies.get("session_id")
     if session_id:
         auth.destroy_session(session_id)
-
     response = RedirectResponse("/login")
     response.delete_cookie("session_id")
     return response
