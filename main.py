@@ -1,155 +1,209 @@
-from fastapi import FastAPI, Request, Form, Depends, Response
-from fastapi.responses import RedirectResponse
+from fastapi import FastAPI, Form, Request, Response
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
-
-from crud import (
-    register_user_crud, login_user_crud, create_movie_crud,
-    update_movie_crud, delete_movie_crud, get_all_movies_crud,
-    find_movie_by_id_crud, search_movies_crud, scrape_movie_crud
-)
-from models import UserCreate, UserLogin, MovieCreate, MovieUpdate, MovieSearch
 import auth
 
 app = FastAPI()
 
-
-templates = Jinja2Templates(directory="templates")
+# Static files (CSS / JS / Images)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
-
-def get_current_user(request: Request):
-    cookie = request.cookies.get("cineverse_session")
-    user_id = auth.verify_session(cookie)
-    if user_id:
-        return user_id
-    return None
-
-
-
+# ---------------------------
+# HOME REDIRECT
+# ---------------------------
 @app.get("/")
-def home(request: Request):
-    user_id = get_current_user(request)
-    if not user_id:
-        return RedirectResponse("/login")
-    movies = get_all_movies_crud()
-    return templates.TemplateResponse("index.html", {"request": request, "user_id": user_id, "movies": movies})
+async def home(request: Request):
+    session_id = request.cookies.get("session_id")
+
+    # If logged in → dashboard
+    username = auth.get_user_by_session(session_id)
+    if username:
+        return RedirectResponse("/dashboard")
+    
+    # If not logged in → login page
+    return RedirectResponse("/login")
 
 
-
-
-@app.get("/register")
-def register_get(request: Request):
-    return templates.TemplateResponse("register.html", {"request": request})
-
-
-@app.post("/register")
-def register_post(
-    request: Request,
-    response: Response,
-    username: str = Form(...),
-    password: str = Form(...)
-):
-    user = register_user_crud(UserCreate(username=username, password=password))
-    if not user:
-        return templates.TemplateResponse("register.html", {"request": request, "error": "Username exists!"})
-    session = auth.create_session(user["id"])
-    resp = RedirectResponse("/", status_code=302)
-    resp.set_cookie("cineverse_session", session)
-    return resp
-
-
-
-@app.get("/login")
-def login_get(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request})
+# ---------------------------
+# LOGIN PAGE
+# ---------------------------
+@app.get("/login", response_class=HTMLResponse)
+async def login_page():
+    return """
+    <html>
+        <body style="font-family: Arial; background:#001933; display:flex; justify-content:center; align-items:center; height:100vh;">
+            <form method="post" style="background:white; padding:30px; border-radius:10px; width:300px;">
+                <h2>Login</h2>
+                <input name="username" placeholder="Username" required style="width:100%; padding:10px; margin-bottom:10px;">
+                <input name="password" type="password" placeholder="Password" required style="width:100%; padding:10px; margin-bottom:10px;">
+                <button type="submit" style="width:100%; padding:10px;">Login</button>
+                <p>Don't have an account? <a href="/register">Register</a></p>
+            </form>
+        </body>
+    </html>
+    """
 
 
 @app.post("/login")
-def login_post(
-    request: Request,
-    response: Response,
-    username: str = Form(...),
-    password: str = Form(...)
-):
-    user = login_user_crud(UserLogin(username=username, password=password))
+async def login(request: Request, username: str = Form(...), password: str = Form(...)):
+    user = auth.login_user(username, password)
     if not user:
-        return templates.TemplateResponse("login.html", {"request": request, "error": "Invalid login!"})
-    session = auth.create_session(user["id"])
-    resp = RedirectResponse("/", status_code=302)
-    resp.set_cookie("cineverse_session", session)
-    return resp
+        return HTMLResponse("<h2>Invalid username or password</h2><a href='/login'>Back</a>")
+
+    # Create session
+    session_id = auth.create_session(username)
+    response = RedirectResponse("/dashboard", status_code=302)
+    response.set_cookie("session_id", session_id)
+    return response
+
+
+# ---------------------------
+# REGISTER PAGE
+# ---------------------------
+@app.get("/register", response_class=HTMLResponse)
+async def register_page():
+    return """
+    <html>
+        <body style="font-family: Arial; background:#001933; display:flex; justify-content:center; align-items:center; height:100vh;">
+            <form method="post" style="background:white; padding:30px; border-radius:10px; width:300px;">
+                <h2>Register</h2>
+                <input name="username" placeholder="Choose username" required style="width:100%; padding:10px; margin-bottom:10px;">
+                <input name="password" type="password" placeholder="Choose password" required style="width:100%; padding:10px; margin-bottom:10px;">
+                <button type="submit" style="width:100%; padding:10px;">Register</button>
+                <p>Already have an account? <a href="/login">Login</a></p>
+            </form>
+        </body>
+    </html>
+    """
+
+
+@app.post("/register")
+async def register(username: str = Form(...), password: str = Form(...)):
+    created = auth.register_user(username, password)
+
+    if not created:
+        return HTMLResponse("<h2>Username already exists</h2><a href='/register'>Back</a>")
+
+    return RedirectResponse("/login", status_code=302)
+
+
+# ---------------------------
+# DASHBOARD
+# ---------------------------
+@app.get("/dashboard", response_class=HTMLResponse)
+async def dashboard(request: Request):
+    session_id = request.cookies.get("session_id")
+    username = auth.get_user_by_session(session_id)
+
+    if not username:
+        return RedirectResponse("/login")
+
+    # Dashboard HTML with navbar
+    return f"""
+    <!doctype html>
+    <html lang="en">
+    <head>
+      <meta charset="utf-8" />
+      <meta name="viewport" content="width=device-width,initial-scale=1" />
+      <title>Cineverse — Dashboard</title>
+      <style>
+        :root {{
+          --accent: #001933;
+          --accent-contrast: #ffffff;
+          --page-bg: #f7f7f9;
+          --card-bg: #ffffff;
+        }}
+        body {{ margin:0; font-family: Arial, Helvetica, sans-serif; background: var(--page-bg); color:#222; }}
+        .navbar {{
+          display:flex;
+          justify-content:space-between;
+          align-items:center;
+          padding:12px 18px;
+          background:var(--accent);
+          color:var(--accent-contrast);
+          gap:12px;
+        }}
+        .nav-left {{ display:flex; gap:16px; align-items:center; }}
+        .logo {{ font-weight:700; font-size:18px; color:var(--accent-contrast); text-decoration:none; }}
+        .nav-links a {{
+          color:var(--accent-contrast);
+          text-decoration:none;
+          margin-left:10px;
+          font-weight:500;
+        }}
+        .nav-links a:hover {{ opacity:0.85; }}
+        .nav-right {{ display:flex; gap:12px; align-items:center; }}
+        .btn-ghost {{
+          background:transparent; border:1px solid rgba(255,255,255,0.18); color:var(--accent-contrast);
+          padding:8px 10px; border-radius:8px; text-decoration:none; font-weight:600;
+        }}
+        .container {{ padding:20px; max-width:1100px; margin:18px auto; }}
+        .welcome-card {{
+          background: var(--card-bg);
+          padding:18px;
+          border-radius:12px;
+          box-shadow: 0 6px 20px rgba(2,6,23,0.06);
+        }}
+        @media (max-width:600px) {{
+          .nav-links {{ display:none; }} /* keep navbar simple on small screens */
+        }}
+      </style>
+    </head>
+    <body>
+      <header class="navbar">
+        <div class="nav-left">
+          <a class="logo" href="/dashboard">🎬 Cineverse</a>
+          <nav class="nav-links" aria-label="Main navigation">
+            <a href="/dashboard">Home</a>
+            <a href="/movies">Movies</a>
+            <a href="/movies/add">Add Movie</a>
+            <a href="/movies/scrape">Scrape</a>
+            <a href="/authors">Authors</a>
+          </nav>
+        </div>
+
+        <div class="nav-right">
+          <div style="color:var(--accent-contrast); font-weight:600;">{username}</div>
+          <a class="btn-ghost" href="/logout">Logout</a>
+        </div>
+      </header>
+
+      <main class="container">
+        <section class="welcome-card">
+          <h2>Welcome, {username} 👋</h2>
+          <p>Use the navigation above to manage movies — add new ones, scrape details, or search the collection.</p>
+        </section>
+
+        <!-- Example placeholder: movies area -->
+        <section style="margin-top:18px;">
+          <div style="display:flex;gap:14px;flex-wrap:wrap;">
+            <div style="flex:1 1 300px; background:#fff; padding:14px; border-radius:10px; box-shadow:0 4px 12px rgba(0,0,0,0.04);">
+              <h3>Movies</h3>
+              <p>Click <a href="/movies">Movies</a> to see the list.</p>
+            </div>
+            <div style="flex:1 1 300px; background:#fff; padding:14px; border-radius:10px; box-shadow:0 4px 12px rgba(0,0,0,0.04);">
+              <h3>Add Movie</h3>
+              <p>Go to <a href="/movies/add">Add Movie</a> to add a movie manually.</p>
+            </div>
+          </div>
+        </section>
+      </main>
+    </body>
+    </html>
+    """
 
 
 
+# ---------------------------
+# LOGOUT
+# ---------------------------
 @app.get("/logout")
-def logout(request: Request):
-    resp = RedirectResponse("/", status_code=302)
-    resp.delete_cookie("cineverse_session")
-    return resp
+async def logout(request: Request):
+    session_id = request.cookies.get("session_id")
+    if session_id:
+        auth.destroy_session(session_id)
 
-
-
-@app.get("/movies/add")
-def add_movie_get(request: Request):
-    return templates.TemplateResponse("add_movie.html", {"request": request})
-
-
-@app.post("/movies/add")
-def add_movie_post(
-    request: Request,
-    title: str = Form(...),
-    year: int = Form(None),
-    director: str = Form(""),
-    description: str = Form(""),
-    added_by: str = Form("manual")
-):
-    movie = create_movie_crud(MovieCreate(title=title, year=year, director=director, description=description, added_by=added_by))
-    return RedirectResponse("/", status_code=302)
-
-
-
-@app.get("/movies/update/{movie_id}")
-def update_movie_get(request: Request, movie_id: int):
-    movie = find_movie_by_id_crud(movie_id)
-    return templates.TemplateResponse("update_movie.html", {"request": request, "movie": movie})
-
-
-@app.post("/movies/update/{movie_id}")
-def update_movie_post(
-    request: Request,
-    movie_id: int,
-    title: str = Form(None),
-    year: int = Form(None),
-    director: str = Form(None),
-    description: str = Form(None)
-):
-    update_movie_crud(movie_id, MovieUpdate(title=title, year=year, director=director, description=description))
-    return RedirectResponse("/", status_code=302)
-
-
-
-@app.get("/movies/delete/{movie_id}")
-def delete_movie_route(movie_id: int):
-    delete_movie_crud(movie_id)
-    return RedirectResponse("/", status_code=302)
-
-
-
-@app.post("/movies/search")
-def search_movies_route(request: Request, query: str = Form(...)):
-    results = search_movies_crud(MovieSearch(query=query))
-    return templates.TemplateResponse("search_results.html", {"request": request, "movies": results})
-
-
-
-@app.get("/movies/scrape")
-def scrape_get(request: Request):
-    return templates.TemplateResponse("scrape_movie.html", {"request": request})
-
-
-@app.post("/movies/scrape")
-def scrape_post(request: Request, title: str = Form(...)):
-    movie = scrape_movie_crud(title)
-    return RedirectResponse("/", status_code=302)
+    response = RedirectResponse("/login")
+    response.delete_cookie("session_id")
+    return response

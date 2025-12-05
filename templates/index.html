@@ -1,42 +1,134 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Cineverse - Dashboard</title>
-    <link rel="stylesheet" href="/static/css/style.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Cineverse — Login</title>
+
+  <link rel="stylesheet" href="/static/css/style.css">
+
+  <style>
+    :root{
+      --bg-color: #f4f4f4;
+      --card-bg: #ffffff;
+      --text-color: #222;
+      --accent: #001933;
+      --muted: #666;
+    }
+
+    body.dark{
+      --bg-color: #0b1220;
+      --card-bg: #081425;
+      --text-color: #e8eef8;
+      --accent: #79a7ff;
+      --muted: #aab5c7;
+    }
+
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      background: var(--bg-color);
+      color: var(--text-color);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .login-card {
+      width: 100%;
+      max-width: 420px;
+      background: var(--card-bg);
+      border-radius: 16px;
+      box-shadow: 0 8px 30px rgba(2,6,23,0.12);
+      padding: 36px;
+      text-align: center;
+    }
+
+    .logo-round{
+      width: 96px;
+      height: 96px;
+      border-radius: 999px;
+      object-fit: cover;
+      margin: 0 auto 14px;
+      display:block;
+      border: 4px solid rgba(0,0,0,0.06);
+      background: linear-gradient(135deg, rgba(0,25,51,0.06), rgba(0,0,0,0.02));
+    }
+
+    h1 { margin:0 0 6px; font-size:22px; }
+    p.lead { margin:0 0 18px; color:var(--muted); }
+
+    .form-input {
+      width: 100%;
+      padding: 12px 14px;
+      margin: 12px 0;
+      border-radius: 10px;
+      border: 1px solid rgba(0,0,0,0.08);
+      background: transparent;
+      color: var(--text-color);
+      font-size: 15px;
+      box-sizing: border-box;
+    }
+    body.dark .form-input {
+      border: 1px solid rgba(255,255,255,0.06);
+      background: rgba(255,255,255,0.02);
+    }
+
+    .btn {
+      display:inline-block;
+      width:100%;
+      padding:12px 14px;
+      border-radius: 10px;
+      border: none;
+      background: var(--accent);
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 12px;
+      font-size: 15px;
+    }
+
+    .muted-link { color: var(--muted); font-size:14px; margin-top:10px; display:block; }
+
+    @media (max-width:480px){
+      .login-card { padding: 24px; border-radius:12px; max-width: 92%; }
+    }
+  </style>
 </head>
 <body>
-  
-    <header class="navbar">
-        <div class="logo">Cineverse</div>
-        <nav>
-            <a href="/">Home</a>
-            <a href="/movies/add">Add Movie</a>
-            <a href="/movies/scrape">Scrape Movie</a>
-            <a href="/logout">Logout</a>
-        </nav>
-    </header>
+  <section class="login-card">
+      <img class="logo-round" src="/static/img/logo.png" alt="Cineverse logo" onerror="this.style.display='none'">
 
-    
-    <main>
-        <h2>All Movies</h2>
-        {% if movies %}
-            <div class="movies-container">
-                {% for movie in movies %}
-                    <div class="movie-card">
-                        <h3>{{ movie.title }} ({{ movie.year }})</h3>
-                        <p><strong>Director:</strong> {{ movie.director }}</p>
-                        <p>{{ movie.description }}</p>
-                        <p><strong>Added by:</strong> {{ movie.added_by }}</p>
-                        <div class="movie-actions">
-                            <a href="/movies/update/{{ movie.id }}">Edit</a> |
-                            <a href="/movies/delete/{{ movie.id }}">Delete</a>
-                        </div>
-                    </div>
-                {% endfor %}
-            </div>
-        {% else %}
-            <p>No movies yet.</p>
-        {% endif %}
-    </main>
+      <h1>Welcome back</h1>
+      <p class="lead">Sign in to access Cineverse</p>
+
+      {% if error %}
+        <div style="color:#d9534f; margin-bottom:10px;">{{ error }}</div>
+      {% endif %}
+
+      <form action="/login" method="post">
+        <input class="form-input" name="username" type="text" placeholder="Username" required>
+        <input class="form-input" name="password" type="password" placeholder="Password" required>
+        <button class="btn" type="submit">Sign in</button>
+      </form>
+
+      <a class="muted-link" href="/register">Don't have an account? Create one</a>
+  </section>
+
+  <script>
+    (function(){
+      const body = document.documentElement;
+      const saved = localStorage.getItem('cineverse_mode');
+
+      if(saved){
+        body.classList.toggle('dark', saved === 'dark');
+      }
+      else {
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        body.classList.toggle('dark', prefersDark);
+      }
+    })();
+  </script>
 </body>
 </html>
