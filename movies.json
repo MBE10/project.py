@@ -1,0 +1,28 @@
+{
+  "movies": [
+    {
+      "title": "500 Days Of Summer",
+      "author": "Marc Webb"
+    },
+    {
+      "title": "Little Women",
+      "author": "Greta Gerwig"
+    },
+    {
+      "title": "Dead Poets Society",
+      "author": "Peter Weir"
+    },
+    {
+      "title": "Midnight in Paris",
+      "author": "Woody Allen"
+    },
+    {
+      "title": "Gone Girl",
+      "author": "David Fincher"
+    },
+    {
+      "title": "Almost Famous",
+      "author": "Cameron Crowe"
+    }
+  ]
+}
