@@ -6,11 +6,9 @@
 </head>
 <body>
     <div class="login-container">
-        <form action="/login" method="post" class="login-form login-box">
+        <form action="/login" method="post" class="login-form">
+            <h1>Cineverse</h1>
             <h3>Welcome Back!</h3>
-            {% if error %}
-                <p class="error">{{ error }}</p>
-            {% endif %}
             <input type="text" name="username" placeholder="Username" required>
             <input type="password" name="password" placeholder="Password" required>
             <button type="submit">Login</button>
@@ -19,4 +17,3 @@
     </div>
 </body>
 </html>
-

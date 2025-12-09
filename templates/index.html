@@ -1,134 +1,85 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html>
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Cineverse — Login</title>
-
-  <link rel="stylesheet" href="/static/css/style.css">
-
+  <meta charset="utf-8"/>
+  <title>Cineverse — Home</title>
+  <link rel="stylesheet" href="/static/css/style.css"/>
   <style>
-    :root{
-      --bg-color: #f4f4f4;
-      --card-bg: #ffffff;
-      --text-color: #222;
-      --accent: #001933;
-      --muted: #666;
-    }
-
-    body.dark{
-      --bg-color: #0b1220;
-      --card-bg: #081425;
-      --text-color: #e8eef8;
-      --accent: #79a7ff;
-      --muted: #aab5c7;
-    }
-
-    body {
-      margin: 0;
-      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-      background: var(--bg-color);
-      color: var(--text-color);
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .login-card {
-      width: 100%;
-      max-width: 420px;
-      background: var(--card-bg);
-      border-radius: 16px;
-      box-shadow: 0 8px 30px rgba(2,6,23,0.12);
-      padding: 36px;
-      text-align: center;
-    }
-
-    .logo-round{
-      width: 96px;
-      height: 96px;
-      border-radius: 999px;
-      object-fit: cover;
-      margin: 0 auto 14px;
-      display:block;
-      border: 4px solid rgba(0,0,0,0.06);
-      background: linear-gradient(135deg, rgba(0,25,51,0.06), rgba(0,0,0,0.02));
-    }
-
-    h1 { margin:0 0 6px; font-size:22px; }
-    p.lead { margin:0 0 18px; color:var(--muted); }
-
-    .form-input {
-      width: 100%;
-      padding: 12px 14px;
-      margin: 12px 0;
-      border-radius: 10px;
-      border: 1px solid rgba(0,0,0,0.08);
-      background: transparent;
-      color: var(--text-color);
-      font-size: 15px;
-      box-sizing: border-box;
-    }
-    body.dark .form-input {
-      border: 1px solid rgba(255,255,255,0.06);
-      background: rgba(255,255,255,0.02);
-    }
-
-    .btn {
-      display:inline-block;
-      width:100%;
-      padding:12px 14px;
-      border-radius: 10px;
-      border: none;
-      background: var(--accent);
-      color: white;
-      font-weight: 600;
-      cursor: pointer;
-      margin-top: 12px;
-      font-size: 15px;
-    }
-
-    .muted-link { color: var(--muted); font-size:14px; margin-top:10px; display:block; }
-
-    @media (max-width:480px){
-      .login-card { padding: 24px; border-radius:12px; max-width: 92%; }
-    }
+    body { font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial; padding: 28px; background:#f7f8fb; color:#111 }
+    header { display:flex; justify-content:space-between; align-items:center; margin-bottom:18px }
+    .card { background:#fff; padding:18px; border-radius:12px; box-shadow: 0 6px 18px rgba(2,6,23,0.06); margin-bottom:12px }
+    .small { font-size:13px; color:#666 }
+    .btn { padding:8px 12px; border-radius:8px; border:none; cursor:pointer; background:#001933; color:#fff }
+    form.inline { display:inline }
   </style>
 </head>
 <body>
-  <section class="login-card">
-      <img class="logo-round" src="/static/img/logo.png" alt="Cineverse logo" onerror="this.style.display='none'">
+  <header>
+    <div>
+      <h2 style="margin:0">Cineverse</h2>
+      <div class="small">Welcome{% if current_user %}, {{ current_user }}{% endif %}</div>
+    </div>
 
-      <h1>Welcome back</h1>
-      <p class="lead">Sign in to access Cineverse</p>
-
-      {% if error %}
-        <div style="color:#d9534f; margin-bottom:10px;">{{ error }}</div>
-      {% endif %}
-
-      <form action="/login" method="post">
-        <input class="form-input" name="username" type="text" placeholder="Username" required>
-        <input class="form-input" name="password" type="password" placeholder="Password" required>
-        <button class="btn" type="submit">Sign in</button>
+    <div>
+      <form class="inline" action="/logout" method="post" style="display:inline;">
+        <button class="btn" type="submit">Logout</button>
       </form>
+    </div>
+  </header>
 
-      <a class="muted-link" href="/register">Don't have an account? Create one</a>
+  <section class="card">
+    <h3 style="margin-top:0">Add Movie / Show</h3>
+    <form action="/movies/create" method="post">
+      <input name="title" placeholder="Title" required style="width:60%; padding:8px; border-radius:8px; border:1px solid #ddd" />
+      <select name="type" style="padding:8px; border-radius:8px; border:1px solid #ddd">
+        <option value="movie">Movie</option>
+        <option value="show">Show</option>
+      </select>
+      <input name="year" placeholder="Year" style="width:80px; padding:8px; border-radius:8px; border:1px solid #ddd" />
+      <button class="btn" type="submit">Add</button>
+    </form>
   </section>
 
-  <script>
-    (function(){
-      const body = document.documentElement;
-      const saved = localStorage.getItem('cineverse_mode');
+  <section class="card">
+    <h3 style="margin-top:0">Movies & Shows</h3>
+    <ul>
+      {% for m in movies %}
+        <li>
+          <strong>{{ m.title }}</strong> <span class="small">({{ m.type }}{% if m.year %}, {{ m.year }}{% endif %})</span>
+          <form style="display:inline" action="/movies/{{ m.id }}/delete" method="post"><button style="margin-left:8px" class="small">delete</button></form>
+        </li>
+      {% else %}
+        <li class="small">No movies yet — add one.</li>
+      {% endfor %}
+    </ul>
+  </section>
 
-      if(saved){
-        body.classList.toggle('dark', saved === 'dark');
-      }
-      else {
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        body.classList.toggle('dark', prefersDark);
-      }
-    })();
-  </script>
+  <section class="card">
+    <h3 style="margin-top:0">Add Author & Book</h3>
+
+    <form action="/authors/create" method="post" style="margin-bottom:10px;">
+      <input name="name" placeholder="Author name" required style="padding:8px; border-radius:8px; border:1px solid #ddd" />
+      <button class="btn" type="submit">Add Author</button>
+    </form>
+
+    <form action="/books/create" method="post">
+      <input name="title" placeholder="Book title" required style="padding:8px; border-radius:8px; border:1px solid #ddd" />
+      <input name="author_name" placeholder="Author name (existing or new)" required style="padding:8px; border-radius:8px; border:1px solid #ddd" />
+      <button class="btn" type="submit">Add Book</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <h3 style="margin-top:0">Books</h3>
+    <ul>
+      {% for b in books %}
+        <li>{{ b.title }} — {{ b.author.name if b.author else "—" }}
+          <form style="display:inline" action="/books/{{ b.id }}/delete" method="post"><button style="margin-left:8px" class="small">delete</button></form>
+        </li>
+      {% else %}
+        <li class="small">No books yet — add one.</li>
+      {% endfor %}
+    </ul>
+  </section>
 </body>
 </html>
